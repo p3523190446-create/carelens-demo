@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>青囊智巡 CareLens Agent · 本地交互体验台</title>
+  <link rel="stylesheet" href="static/styles.css" />
+</head>
+<body>
+<div style="background:#fffbeb;border-bottom:1px solid #fcd34d;color:#78350f;padding:8px 16px;font-size:13px;text-align:center;">静态演示版：下列「闭环 / 截图分析 / 医院体检」均为本地真实引擎运行结果的预存回放，不是实时计算；不代表已上华为云部署或微信真机验收。完整实时版需在本地运行 demo-workbench。</div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-badge" aria-hidden="true">青</div>
+        <div>
+          <div class="brand-title">青囊智巡 · CareLens Agent</div>
+          <div class="brand-sub">第十一届华为 ICT 大赛中国区创新赛 · 赛题 2 本地交互体验台</div>
+        </div>
+      </div>
+
+      <nav class="nav-tabs" role="tablist" aria-label="功能体验区">
+        <button class="nav-tab active" data-tab="lab" role="tab" aria-selected="true">① 挂号无障碍实验室</button>
+        <button class="nav-tab" data-tab="pipeline" role="tab" aria-selected="false">② 一键跑闭环</button>
+        <button class="nav-tab" data-tab="hospitals" role="tab" aria-selected="false">③ 真实医院与截图体检</button>
+        <button class="nav-tab" data-tab="overview" role="tab" aria-selected="false">④ 项目全景与红线</button>
+      </nav>
+
+      <div class="status-pills">
+        <span class="pill pill-green" id="engine-status-pill">本地引擎连接中...</span>
+        <span class="pill pill-blue">0 云费用 · 冻结源码只读</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- ==================== TAB 1: 挂号无障碍实验室 ==================== -->
+    <section id="tab-lab" class="tab-panel active">
+      <div class="hero-strip">
+        <div class="hero-text">
+          <span class="hero-kicker">30秒先看懂我们在做什么</span>
+          <h1>它不是替老人挂号的软件，而是专给挂号界面做「适老 + 视障体检与自动修补」的 AI 助手</h1>
+          <p>下面这台虚拟手机里装的是我们自建的<strong>靶场挂号小程序（4页共12个真实无障碍坑）</strong>。你可以直接点手机里的医院、科室、号源走一遍挂号流程，切换「修复前 / 修复后」，甚至开启<strong>老人低视力滤镜</strong>和<strong>视障读屏顺序试听</strong>，亲身体验老人和盲人到底卡在哪里。</p>
+        </div>
+        <div class="hero-stats">
+          <div class="mini-stat">
+            <div class="mini-stat-val">12 个</div>
+            <div class="mini-stat-lbl">典型无障碍缺陷</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-val">4 个</div>
+            <div class="mini-stat-lbl">挂号流程真页面</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-val">18 → 0</div>
+            <div class="mini-stat-lbl">本地闭环告警消零</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lab-controls card">
+        <div class="control-row">
+          <div class="control-group">
+            <span class="control-label">挂号步骤：</span>
+            <div class="segmented" id="page-steps">
+              <button class="seg-btn active" data-page="index">① 选医院</button>
+              <button class="seg-btn" data-page="departments">② 选科室</button>
+              <button class="seg-btn" data-page="doctors">③ 选医生</button>
+              <button class="seg-btn" data-page="confirm">④ 核对提交</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <span class="control-label">对照视图：</span>
+            <div class="segmented" id="view-modes">
+              <button class="seg-btn active" data-mode="before">修复前（有坑）</button>
+              <button class="seg-btn" data-mode="after">修复后（补丁版）</button>
+              <button class="seg-btn" data-mode="compare">左右并排对比</button>
+              <button class="seg-btn" data-mode="wechat">微信真模拟器实拍</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-row control-row-tools">
+          <div class="tool-buttons">
+            <button class="tool-btn" id="btn-elderly-filter" aria-pressed="false">
+              👴 模拟老人低视力视角：关
+            </button>
+            <button class="tool-btn tool-btn-primary" id="btn-sr-mode" aria-pressed="false">
+              🔊 视障读屏顺序试听
+            </button>
+            <button class="tool-btn hidden" id="btn-toggle-modal">
+              🪟 切换「挂号须知」弹窗
+            </button>
+            <button class="tool-btn" id="btn-clear-highlight">
+              🧹 清除高亮
+            </button>
+          </div>
+          <div class="flow-hint" id="flow-hint-text">
+            提示：可直接点击手机内的医院/科室/时段卡片体验跳转；点击右侧任意缺陷卡片即可定位高亮！
+          </div>
+        </div>
+
+        <!-- 视障读屏演练字幕条 -->
+        <div id="sr-bar" class="sr-bar hidden">
+          <div class="sr-bar-head">
+            <div class="sr-bar-title">
+              <span>🎧 视障读屏焦点顺序模拟器（严格按源码 DOM 顺序）</span>
+              <span class="sr-step-badge" id="sr-step-counter">第 0 / 0 步</span>
+            </div>
+            <div class="sr-bar-actions">
+              <label class="sr-tts-toggle">
+                <input type="checkbox" id="chk-sr-tts" checked />
+                <span>浏览器语音播报</span>
+              </label>
+              <button class="btn-sm" id="btn-sr-prev">← 上一项</button>
+              <button class="btn-sm btn-sm-primary" id="btn-sr-next">下一项 (Tab) →</button>
+              <button class="btn-sm" id="btn-sr-auto">▶ 自动连播</button>
+              <button class="btn-sm" id="btn-sr-close">关闭读屏</button>
+            </div>
+          </div>
+          <div class="sr-readout" id="sr-readout-box">
+            <div class="sr-spoken" id="sr-spoken-text">点击「下一项 (Tab)」开始模拟盲人用键盘/手势逐个扫过页面元素。</div>
+            <div class="sr-diag" id="sr-diag-text">建议先切到「④ 核对提交」的修复前版本，感受焦点第1步直接跳到最底部的「提交预约」有多反人类！</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lab-workspace">
+        <!-- 左侧：手机画框 / 对比 / 微信真模拟器截图 -->
+        <div class="phone-stage card">
+          <div id="single-phone-wrap" class="single-phone-wrap">
+            <div class="phone-frame">
+              <div class="phone-notch">
+                <span class="phone-tag" id="single-phone-label">修复前 · 375px 模拟预览</span>
+                <span class="phone-route" id="single-phone-route">pages/index/index</span>
+              </div>
+              <iframe id="phone-frame-single" class="phone-iframe" title="挂号小程序交互预览"></iframe>
+            </div>
+          </div>
+
+          <div id="compare-phones-wrap" class="compare-phones-wrap hidden">
+            <div class="phone-frame phone-frame-compact">
+              <div class="phone-notch phone-notch-bad">
+                <span class="phone-tag">修复前（原版 12 缺陷）</span>
+              </div>
+              <iframe id="phone-frame-before" class="phone-iframe" title="修复前小程序预览"></iframe>
+            </div>
+            <div class="phone-frame phone-frame-compact">
+              <div class="phone-notch phone-notch-good">
+                <span class="phone-tag">修复后（青囊补丁版）</span>
+              </div>
+              <iframe id="phone-frame-after" class="phone-iframe" title="修复后小程序预览"></iframe>
+            </div>
+          </div>
+
+          <div id="wechat-sim-wrap" class="wechat-sim-wrap hidden">
+            <div class="wechat-alert">
+              <strong>⚠️ 答辩关键证据（2026-11-21 微信开发者工具 Stable 2.02.2608080 真实跑通）：</strong>
+              在 375px HTML 预览里补丁后是 0 告警，但放进真实微信 <code>style:"v2"</code> 渲染环境后，我们抓到了真模拟器暴露的 3 个引擎差异，证明“只做预览不跑真环境会翻车”：
+              <ul>
+                <li><strong>1. <code>outerWxml()</code> 剥离 <code>bindtap</code>：</strong>纯运行时模拟器漏检 <code>D10</code>（修复前只检出 11/12），证明必须保留静态 WXML 解析通道。</li>
+                <li><strong>2. 微信 <code>v2</code> 默认 <code>button</code> 184px 宽度限制导致真实截断：</strong><code>confirm</code> 页 <code>#verify-alt-btn</code> 被截断成「无法拖动？点」，<code>doctors</code> 页 <code>#modal-close</code> (<code>×</code>) 被拉宽到 184px 偏离右上角！</li>
+                <li><strong>3. 容器样式分离误报：</strong>微信原生 <code>&lt;button&gt;</code> 计算样式读到 UA 默认 17px 黑色，引发 7 条假阳性，需多通道交叉核对。</li>
+              </ul>
+            </div>
+            <div class="wechat-shots-grid">
+              <div class="wechat-shot-card">
+                <div class="shot-title">修复前 · 微信真模拟器实拍（before_v2 · 检出 11/12，漏 D10）</div>
+                <img id="img-wechat-before" alt="微信开发者工具修复前截图" />
+              </div>
+              <div class="wechat-shot-card">
+                <div class="shot-title">修复后 · 微信真模拟器实拍（after_v2 · 暴露 184px 截断回归）</div>
+                <img id="img-wechat-after" alt="微信开发者工具修复后截图" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧：缺陷清单与白话解析 -->
+        <div class="defect-panel card">
+          <div class="panel-head">
+            <div>
+              <h2 id="defect-panel-title">当前页面缺陷清单</h2>
+              <p class="panel-sub" id="defect-panel-sub">点击下方任意卡片，左侧手机将自动红框高亮并滚动到对应控件</p>
+            </div>
+            <label class="toggle-all-defects">
+              <input type="checkbox" id="chk-show-all-defects" />
+              <span>显示全部 12 项</span>
+            </label>
+          </div>
+          <div id="defect-list" class="defect-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: 一键跑闭环 ==================== -->
+    <section id="tab-pipeline" class="tab-panel">
+      <div class="card pipeline-hero">
+        <div class="pipeline-hero-top">
+          <div>
+            <h2>AgentArts 多节点闭环实跑台（实时调用本地 FastAPI 后端）</h2>
+            <p class="muted">这里不是静态假数据——点击下方按钮会真实调用 <code>source/carelens-agent/service/</code> 里的补丁生成器、静态/渲染回归校验器和预评测报告生成器，全程无盘（<code>CARELENS_PERSIST=0</code>），不改任何冻结文件。</p>
+          </div>
+          <div class="pipeline-actions">
+            <button class="btn-primary" id="btn-run-fast-loop">🚀 一键运行完整闭环（快速回归 · ~1秒）</button>
+            <button class="btn-secondary" id="btn-run-deep-verify">🔬 运行 375px Chromium+axe 深度回归（~10秒）</button>
+          </div>
+        </div>
+
+        <!-- 8 节点工作流可视化 -->
+        <div class="workflow-strip" id="workflow-strip"></div>
+      </div>
+
+      <div class="kpi-grid" id="pipeline-kpis">
+        <div class="kpi-card">
+          <div class="kpi-label">修复前基线告警</div>
+          <div class="kpi-value" id="kpi-before">18 条 / 12 缺陷</div>
+          <div class="kpi-note">静态+渲染标定（Recall 100%）</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">自动生成代码补丁</div>
+          <div class="kpi-value" id="kpi-patches">待运行</div>
+          <div class="kpi-note" id="kpi-patches-note">点击上方按钮现场生成</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">回归复测后告警</div>
+          <div class="kpi-value kpi-good" id="kpi-after">待运行</div>
+          <div class="kpi-note" id="kpi-after-note">零副作用才算过关</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">诚实验收边界</div>
+          <div class="kpi-value kpi-warn" id="kpi-honesty">本地预览通过 ≠ 真机</div>
+          <div class="kpi-note" id="kpi-honesty-note">真机读屏与华为云上云待推进</div>
+        </div>
+      </div>
+
+      <div class="pipeline-workspace">
+        <div class="card diff-card">
+          <div class="panel-head">
+            <div>
+              <h3>交互式代码补丁 Diff 浏览器</h3>
+              <p class="panel-sub" id="diff-summary-text">运行闭环后，可按 WXML / WXSS 文件查看青囊自动改了哪几行代码</p>
+            </div>
+          </div>
+          <div class="diff-file-tabs" id="diff-file-tabs"></div>
+          <pre class="diff-viewer" id="diff-viewer">尚未运行补丁生成。请点击上方「🚀 一键运行完整闭环」实时生成 306 行 Unified Diff。</pre>
+        </div>
+
+        <div class="card report-card">
+          <div class="panel-head">
+            <div>
+              <h3>实名预评测报告预览</h3>
+              <p class="panel-sub">由 <code>report.py</code> 实时汇总生成，含独立第三方非官方认证免责声明</p>
+            </div>
+            <button class="btn-sm" id="btn-copy-report" disabled>📋 复制报告</button>
+          </div>
+          <div class="report-preview" id="report-preview">
+            <div class="empty-state">运行闭环后，此处将实时渲染完整 Markdown 预评测报告。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 工程证据折叠层 -->
+      <details class="card engineering-drawer">
+        <summary>🛠️ 工程证据层（展开测试 AgentArts Runtime <code>/invocations</code> 协议 &amp; 查看原始 JSON Trace）</summary>
+        <div class="drawer-body">
+          <div class="drawer-actions">
+            <button class="btn-sm btn-sm-primary" id="btn-test-invocations">调用 POST /invocations (orchestrateOwnedSample · mock模式)</button>
+            <span class="muted">注意：当前为本地 <code>mock</code> 模式（<code>agentarts_cloud_runtime_trace: false</code>），不产生云端调用费用。</span>
+          </div>
+          <pre class="json-box" id="invocations-output">点击上方按钮演练 AgentArts Runtime JSON 入站响应...</pre>
+        </div>
+      </details>
+    </section>
+
+    <!-- ==================== TAB 3: 真实医院体检 & 通道 B3 截图自测 ==================== -->
+    <section id="tab-hospitals" class="tab-panel">
+      <div class="card section-intro">
+        <div>
+          <h2>真实医院挂号网页体检（2026-11-21 广州移动国内直连 13 目标实测）</h2>
+          <p class="muted">不仅测自己的靶场小程序，我们还用合规研究爬虫（声明研究身份 UA、间隔 ≥3.5s、遇 403/WAF 绝不绕过）实测了广东地区 13 个真实医疗挂号网页。点击任意一家，查看老年人与全盲用户各卡在哪，并可现场为它生成 Web 修复建议。</p>
+        </div>
+        <div class="filter-pills" id="hospital-filters">
+          <button class="seg-btn active" data-group="all">全部 (13)</button>
+          <button class="seg-btn" data-group="newly_unblocked">新打通三甲 (3)</button>
+          <button class="seg-btn" data-group="gz_gdgh_platform">广州平台与省医 (7)</button>
+          <button class="seg-btn" data-group="overseas_reproduced">境外复现 (1)</button>
+          <button class="seg-btn" data-group="waf_403_halted">WAF 403 停测 (2)</button>
+        </div>
+      </div>
+
+      <div class="hospitals-layout">
+        <div class="hospital-list card" id="hospital-list"></div>
+
+        <div class="hospital-detail card" id="hospital-detail">
+          <div class="empty-state">请从左侧选择一家医院查看实测细节</div>
+        </div>
+      </div>
+
+      <!-- 通道 B3 截图自测 -->
+      <div class="card b3-section">
+        <div class="panel-head">
+          <div>
+            <h2>通道 B3：截图视觉级体检实验室（亲手上传截图试试看）</h2>
+            <p class="panel-sub">当医院不给源码、网页又有 WAF 拦爬虫时，用截图也能检测低对比度风险区。<strong>证据边界：</strong>本通道为「视觉级证据（visual-level）」，视觉覆盖上限 41.67%，不能替代代码级/无障碍树审计。</p>
+          </div>
+          <span class="pill pill-amber" id="b3-ocr-pill">OCR 插件位：本地未装 RapidOCR（使用 Pillow+numpy 启发式分块）</span>
+        </div>
+
+        <div class="b3-controls">
+          <div class="b3-samples">
+            <span class="control-label">一键试跑内置实测截图：</span>
+            <button class="btn-sm btn-sm-primary" data-sample="fsyyy_375">佛山市一手机页 (375px)</button>
+            <button class="btn-sm" data-sample="gdmuah_375">广医附一手机页 (375px)</button>
+            <button class="btn-sm" data-sample="preview_index_before">靶场首页 (修复前)</button>
+            <button class="btn-sm" data-sample="preview_doctors_before">靶场医生页 (修复前)</button>
+          </div>
+          <div class="b3-upload-bar">
+            <label class="upload-btn">
+              📁 上传本地 PNG/JPG 截图
+              <input type="file" id="b3-file-input" accept="image/png,image/jpeg,image/webp" hidden />
+            </label>
+            <label class="viewport-label">
+              逻辑视口宽度：
+              <input type="number" id="b3-viewport-width" value="375" min="240" max="1920" />
+              px
+            </label>
+          </div>
+        </div>
+
+        <div class="b3-workspace">
+          <div class="b3-canvas-wrap" id="b3-dropzone">
+            <canvas id="b3-canvas"></canvas>
+            <div class="b3-placeholder" id="b3-placeholder">
+              拖拽截图到这里，或点击上方「内置样例 / 上传截图」立即调用后端 Pillow+numpy 引擎标出低对比度风险区
+            </div>
+          </div>
+          <div class="b3-results" id="b3-results">
+            <div class="empty-state">尚未分析截图。选择任意样例后，左侧图像将用红框标出疑似低对比度区域，此处展示分块对比度估算详情。</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: 项目全景与红线 ==================== -->
+    <section id="tab-overview" class="tab-panel">
+      <div class="overview-grid">
+        <div class="card">
+          <h2>1. 一句话吃透赛事与架构</h2>
+          <p class="lead-p"><strong>参赛赛题：</strong>第十一届华为 ICT 大赛中国区创新赛 · 赛题 2「基于华为云 AgentArts 智能体开发平台的 Agent 设计和应用」。</p>
+          <p><strong>核心定位：</strong>做“看得见代码、守得住边界、查得出真坑”的医疗挂号适老与无障碍预检智能体（CareLens Agent）。不是空泛大模型聊天，而是把<strong>三通道证据引擎（Web Playwright+axe、小程序静态+渲染+微信真模拟器、B3 视觉截图）</strong>封装为 OpenAPI 插件，由 AgentArts 多节点工作流驱动「体检 → 老年人/视障双画像诊断 → 生成国标映射代码补丁 → 沙箱回归复测 → 实名预评测报告」闭环。</p>
+          <div class="channel-cards">
+            <div class="ch-card">
+              <div class="ch-tag">通道 A · 公开网页</div>
+              <div class="ch-desc">Playwright + axe-core + 键盘 Tab 走查 + 200%/375px 重排检测，已国内直连实测 13 个广东医疗目标。</div>
+            </div>
+            <div class="ch-card">
+              <div class="ch-tag">通道 B1/B2 · 小程序</div>
+              <div class="ch-desc">静态 WXML/WXSS 解析 + 375px 渲染 + 微信开发者工具 <code>automator</code> 真模拟器闭环，定位代码行级缺陷。</div>
+            </div>
+            <div class="ch-card">
+              <div class="ch-tag">通道 B3 · 截图包</div>
+              <div class="ch-desc">无源码时的视觉级兜底（Pillow+numpy 分块对比度，预留 RapidOCR/华为云 OCR 插件位），明确标注覆盖上限 41.67%。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>2. 真实进度仪表盘（直接读取终审清单 <code>review-and-acceptance.json</code>）</h2>
+          <div id="acceptance-matrix" class="acceptance-matrix"></div>
+          <div id="quotas-box" class="quotas-box"></div>
+        </div>
+
+        <div class="card deadline-card">
+          <h2>3. 当下最紧要行动清单（按优先级）</h2>
+          <div id="action-list" class="action-list"></div>
+        </div>
+
+        <div class="card redlines-card">
+          <h2>4. 答辩与文档严禁踩坑红线（<code>not_claimed</code> 核验）</h2>
+          <div class="redline-rules">
+            <div class="rule-item"><strong>红线 1（国标条款）：</strong><code>4.5:1</code> 对比度严格归属于 <code>WCAG 2.x SC 1.4.3 + 工信部 67 号文附件 2 第 1.3 条 + 微信长辈就医规范 1.1.3</code>，绝不能写成 <code>GB/T 37668-2019</code> 规定了 4.5:1。</div>
+            <div class="rule-item"><strong>红线 2（广州平台口径）：</strong>仅陈述「多渠道统一预约与跨渠道查询支付」，绝不宣称「底层同源号源」。</div>
+            <div class="rule-item"><strong>红线 3（健康160 隐私与数字）：</strong>绝不复用旧口头计数 <code>22/40</code>；<code>jk160_home.png</code> 页脚含客户端公网 IP，未裁剪打码前严禁展示（本体验台已硬拦截）。</div>
+            <div class="rule-item"><strong>红线 4（微信模拟器实话）：</strong>375px HTML 预览 <code>0</code> 告警不等于真机通过，主动亮出 <code>after_v2</code> 暴露的 <code>184px</code> 按钮截断回归是加分实证，不是掩盖。</div>
+            <div class="rule-item"><strong>红线 5（未完成绝不虚报）：</strong>华为云部署、云端 Trace、50 条云端导入、MaaS 实调、真实手机 TalkBack/VoiceOver 读屏均如实标记未完成。</div>
+          </div>
+          <details class="sub-details">
+            <summary>查看 <code>review-and-acceptance.json</code> 原文 <code>not_claimed</code> 清单</summary>
+            <ul id="not-claimed-list" class="not-claimed-ul"></ul>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>window.CARELENS_STATIC=true;</script>
+  <script src="static/app.js"></script>
+</body>
+</html>

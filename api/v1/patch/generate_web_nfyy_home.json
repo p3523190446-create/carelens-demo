@@ -1,0 +1,1 @@
+{"label": "AI/规则建议补丁，需开发复核合入", "target": "web", "slug": "nfyy_home", "url": "https://www.nfyy.com/", "summary": {"fixes": 0, "applied": false, "note": "页面被拦截或不可达，没有可修补的证据"}, "fixes": [], "unified_diff": "", "evidence_json": "<project>\\source\\evidence\\2026-11-21\\web_domestic\\nfyy_home.json", "patch_id": "patch_20261124_171105_deb0", "persisted": false}
